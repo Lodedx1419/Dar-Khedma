@@ -1,0 +1,91 @@
+<?php
+/**
+ * Example: How to update your JavaScript to use the new PHP API
+ * 
+ * Before (Node.js/Hono):
+ *   fetch('http://localhost:3000/api/auth/login', ...)
+ * 
+ * After (PHP):
+ *   fetch('/api/auth/login', ...)  // Relative path
+ *   or
+ *   fetch('http://your-pi-ip/api/auth/login', ...)  // Absolute path
+ */
+
+?>
+
+<!-- UPDATE YOUR PUBLIC/INDEX.HTML -->
+<!-- Change API base URL -->
+
+<script>
+  // Option 1: Relative paths (recommended for same domain)
+  const API_BASE = '';  // Will use current domain
+  
+  // Option 2: Absolute path for different domain
+  // const API_BASE = 'http://192.168.1.100';  // Your Pi IP
+  
+  // Authentication Example
+  async function login(email, password) {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await response.json();
+    
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      return true;
+    }
+    return false;
+  }
+  
+  // Services Example
+  async function getServices(audience = 'individual') {
+    const response = await fetch(`${API_BASE}/api/services?audience=${audience}`);
+    const data = await response.json();
+    return data.services;
+  }
+  
+  // Authenticated Request Example
+  async function getUserBookings() {
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(`${API_BASE}/api/bookings`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    const data = await response.json();
+    return data.bookings;
+  }
+  
+  // Create Booking Example
+  async function createBooking(bookingData) {
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch(`${API_BASE}/api/bookings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(bookingData)
+    });
+    
+    return await response.json();
+  }
+  
+  // Contact Form Example
+  async function submitContact(name, email, message) {
+    const response = await fetch(`${API_BASE}/api/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message })
+    });
+    
+    return await response.json();
+  }
+</script>
