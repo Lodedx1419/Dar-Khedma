@@ -4,9 +4,20 @@
  * Lightweight JWT implementation for PHP
  */
 
-define('JWT_SECRET', 'your-super-secret-key-change-this-in-production');
+// Load environment variables from .env file
+require_once(__DIR__ . '/environment.php');
+
+// Get JWT secret from environment, generate default if not set
+$jwtSecret = getEnv('JWT_SECRET');
+if (!$jwtSecret || $jwtSecret === 'your-secure-random-string-here') {
+    // Fallback to a secure random string if not configured
+    $jwtSecret = bin2hex(random_bytes(32));
+    error_log('WARNING: JWT_SECRET not configured. Using temporary random key. Set JWT_SECRET in .env file for production.');
+}
+
+define('JWT_SECRET', $jwtSecret);
 define('JWT_ALGORITHM', 'HS256');
-define('JWT_EXPIRY', 86400 * 7); // 7 days
+define('JWT_EXPIRY', (int)getEnv('JWT_EXPIRY', 86400 * 7)); // 7 days default
 
 /**
  * Create a JWT token
@@ -67,13 +78,23 @@ function verifyJWT($token) {
  * Get token from Authorization header
  */
 function getTokenFromHeader() {
-    $headers = getallheaders();
-    $authHeader = $headers['Authorization'] ?? null;
-    
+    // Try multiple header sources for compatibility with different server setups
+    $authHeader = null;
+
+    // First, try the standard $_SERVER variable (works in most configurations)
+    if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
+    }
+    // Fallback to getallheaders() if available (some Apache setups)
+    elseif (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        $authHeader = $headers['Authorization'] ?? null;
+    }
+
     if (!$authHeader || !preg_match('/Bearer\s+(.+)/i', $authHeader, $matches)) {
         return null;
     }
-    
+
     return $matches[1];
 }
 

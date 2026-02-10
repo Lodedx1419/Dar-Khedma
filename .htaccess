@@ -1,20 +1,37 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # Remove .php extension
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^([^\.]+)$ $1.php [NC, L]
-    
-    # Route API calls to index.php
+
+    # Handle CORS preflight requests
+    RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+    RewriteRule ^(.*)$ - [L]
+
+    # Route API calls to index.php (must come BEFORE .php extension rule)
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ /api/index.php [QSA, L]
+    RewriteRule ^api/(.*)$ /api/index.php [QSA,L]
+
+    # Remove .php extension from URLs (for non-API files)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-l
+    RewriteRule ^([^\.]+)$ $1.php [NC,L]
 </IfModule>
 
 <IfModule mod_headers.c>
+    # Allow cross-origin requests
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, Accept"
+
+    # Prevent caching of API responses for better debugging
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
 </IfModule>
+
+<IfModule !mod_rewrite.c>
+    # If mod_rewrite is not available, show error
+    ErrorDocument 404 "Error: mod_rewrite is not enabled on this server. API routing will not work."
+</IfModule>
+
